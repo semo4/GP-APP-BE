@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from pydantic import BaseModel  # ----------task3Correction
 from pinecone import Pinecone, ServerlessSpec  # Pinecone - NEW USAGE
 from google.cloud import firestore  # Firestore (Firebase)
+from google.oauth2 import service_account
 from collections import Counter
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
@@ -24,6 +25,7 @@ import re
 import nltk
 import string
 import time
+import json
 
 # import json
 # import cohere
@@ -96,17 +98,27 @@ class ArticleRequest(BaseModel):
 
 
 # Set the path for Google credentials (for Firebase/Firestore)
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
-    "./credentials/gennews-2e5b4-9fcb668e6b19.json"
-)
-if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-    raise EnvironmentError(
-        "The GOOGLE_APPLICATION_CREDENTIALS environment variable is not set. "
-        "Please set it to point to your service account JSON file."
-    )
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
+#     "./credentials/gennews-2e5b4-81dd08b9eb2f.json"
+# )
+# if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+#     raise EnvironmentError(
+#         "The GOOGLE_APPLICATION_CREDENTIALS environment variable is not set. "
+#         "Please set it to point to your service account JSON file."
+#     )
+cred_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+if not cred_json:
+    raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS not set")
+
+# Parse JSON and create credentials
+cred_dict = json.loads(cred_json)
+credentials = service_account.Credentials.from_service_account_info(cred_dict)
+
+# Initialize Firestore with credentials
+firestore_client = firestore.Client(credentials=credentials, project=cred_dict["project_id"])
 
 # Initialize Firestore (Firebase)
-firestore_client = firestore.Client()
+# firestore_client = firestore.Client()
 
 
 ###############################################################################
