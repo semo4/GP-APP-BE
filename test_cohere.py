@@ -1,4 +1,5 @@
 import os
+
 import cohere
 from dotenv import load_dotenv
 
@@ -11,6 +12,7 @@ API_KEY = os.getenv("API_KEY")
 # ✅ Initialize Cohere client
 co = cohere.Client(API_KEY)
 
+
 def test_cohere():
     print("🔎 Testing Cohere API...")
 
@@ -19,7 +21,7 @@ def test_cohere():
             model="command",  # ✅ Corrected model name
             prompt="Write a short article about the impact of AI in journalism.",
             max_tokens=300,  # Test with a short response
-            temperature=0.6
+            temperature=0.6,
         )
 
         print("\n🛠 DEBUG: Full Cohere Response 🛠\n", response)
@@ -27,6 +29,7 @@ def test_cohere():
 
     except Exception as e:
         print("❌ Error testing Cohere:", str(e))
+
 
 # Run the test
 if __name__ == "__main__":

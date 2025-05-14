@@ -1,6 +1,7 @@
 import os
+
 import requests
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 router = APIRouter()
 
@@ -9,10 +10,13 @@ NEWS_API_KEY = os.getenv("NEWS_API_KEY", "")
 
 # Ensure the API key is loaded
 if not NEWS_API_KEY:
-    raise ValueError("Missing NEWS_API_KEY. Ensure it is set in the environment variables.")
+    raise ValueError(
+        "Missing NEWS_API_KEY. Ensure it is set in the environment variables."
+    )
 
 # News API Endpoint
 NEWS_API_URL = "https://newsapi.org/v2/everything"
+
 
 def fetch_trending_news_by_topic(topic):
     """
@@ -32,7 +36,7 @@ def fetch_trending_news_by_topic(topic):
         response = requests.get(NEWS_API_URL, params=params)
         response.raise_for_status()
         data = response.json()
-        
+
         if data.get("status") != "ok":
             return {"error": f"News API Error: {data.get('message', 'Unknown error')}"}
 
@@ -43,13 +47,16 @@ def fetch_trending_news_by_topic(topic):
                 "url": article.get("url", "#"),
                 "source": article.get("source", {}).get("name", "Unknown Source"),
                 "publishedAt": article.get("publishedAt", "Unknown Date"),
-                "content": article.get("content", "Full article content is unavailable."),
+                "content": article.get(
+                    "content", "Full article content is unavailable."
+                ),
             }
             for article in data.get("articles", [])
         ]
 
     except requests.exceptions.RequestException as e:
         return {"error": f"Failed to fetch news: {str(e)}"}
+
 
 @router.get("/news")
 def get_news(topic: str = Query(..., description="The topic to search for")):

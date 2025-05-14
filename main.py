@@ -1,37 +1,34 @@
-from fastapi import FastAPI, HTTPException, Request, Body
-from dotenv import load_dotenv
-from pydantic import BaseModel  # ----------task3Correction
-from pinecone import Pinecone, ServerlessSpec  # Pinecone - NEW USAGE
-from google.cloud import firestore  # Firestore (Firebase)
-from google.oauth2 import service_account
-from collections import Counter
-from nltk.tokenize import sent_tokenize, word_tokenize
-from nltk.corpus import stopwords
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi import Query
-from services.news_api_service import fetch_trending_news_by_topic
-from openai import OpenAI
-from textstat import flesch_reading_ease
-from deepeval.metrics import FaithfulnessMetric, ContextualRelevancyMetric, GEval
-from deepeval.test_case import LLMTestCase
-from deepeval import evaluate
-from typing import Dict, Optional, List
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics import jaccard_score
-import openai  # Import OpenAI SDK
-import os
-import requests
-import re
-import nltk
-import string
-import time
 import json
+import os
+import re
 
 # import json
 # import cohere
 import ssl
-from fastapi.responses import StreamingResponse, JSONResponse
+import string
+import time
+from collections import Counter
 from io import BytesIO
+from typing import Dict, Optional
+
+import nltk
+import openai  # Import OpenAI SDK
+import requests
+from deepeval.metrics import ContextualRelevancyMetric, FaithfulnessMetric
+from deepeval.test_case import LLMTestCase
+from dotenv import load_dotenv
+from fastapi import Body, FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from google.cloud import firestore  # Firestore (Firebase)
+from google.oauth2 import service_account
+from nltk.tokenize import sent_tokenize, word_tokenize
+from openai import OpenAI
+from pinecone import Pinecone, ServerlessSpec  # Pinecone - NEW USAGE
+from pydantic import BaseModel  # ----------task3Correction
+from textstat import flesch_reading_ease
+
+from services.news_api_service import fetch_trending_news_by_topic
 
 # ─── macOS SSL workaround so nltk.download can talk HTTPS ────────────────
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -54,7 +51,6 @@ load_dotenv(override=True)
 print("DEBUG: NEWS_API_KEY =", os.getenv("NEWS_API_KEY"))
 print("DEBUG: OPENAI_API_KEY =", os.getenv("OPENAI_API_KEY"))
 
-from services.news_api_service import fetch_trending_news_by_topic
 
 env_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(dotenv_path=env_path, override=True)
@@ -98,36 +94,28 @@ class ArticleRequest(BaseModel):
 
 
 # Set the path for Google credentials (for Firebase/Firestore)
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = (
-#     "./credentials/gennews-2e5b4-81dd08b9eb2f.json"
-# )
-# if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-#     raise EnvironmentError(
-#         "The GOOGLE_APPLICATION_CREDENTIALS environment variable is not set. "
-#         "Please set it to point to your service account JSON file."
-#     )
 credentials_dict = {
-            'type': GCP_ACCOUNT_TYPE,
-            'project_id': GCP_PROJECT_ID,
-            'private_key_id': GCP_PRIVATE_KEY_ID,
-            'private_key': GCP_PRIVATE_KEY,
-            'client_email': GCP_ACCOUNT_EMAIL,
-            'client_id': GCP_ACCOUNT_ID,
-            'auth_uri': GCP_AUTH_URI,
-            'token_uri': GCP_TOKEN_URI,
-            'auth_provider_x509_cert_url': GCP_AUTH_PROVIDER_X509_CERT_URL,
-            'client_x509_cert_url': GCP_CLIENT_X509_CERT_URL
-        }
-        credentials_dict['private_key'] = credentials_dict[
-            'private_key'].replace('\\n', '\n')
-        with open('credentials.json', 'w') as file:
-            file.write(json.dumps(credentials_dict))
-        credentials = service_account.Credentials.from_service_account_file(
-            'credentials.json')
-        os.remove('credentials.json')
+    "type": os.getenv("GCP_ACCOUNT_TYPE"),
+    "project_id": os.getenv("GCP_PROJECT_ID"),
+    "private_key_id": os.getenv("GCP_PRIVATE_KEY_ID"),
+    "private_key": os.getenv("GCP_PRIVATE_KEY"),
+    "client_email": os.getenv("GCP_ACCOUNT_EMAIL"),
+    "client_id": os.getenv("GCP_ACCOUNT_ID"),
+    "auth_uri": os.getenv("GCP_AUTH_URI"),
+    "token_uri": os.getenv("GCP_TOKEN_URI"),
+    "auth_provider_x509_cert_url": os.getenv("GCP_AUTH_PROVIDER_X509_CERT_URL"),
+    "client_x509_cert_url": os.getenv("GCP_CLIENT_X509_CERT_URL"),
+}
+credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
+with open("credentials.json", "w") as file:
+    file.write(json.dumps(credentials_dict))
+credentials = service_account.Credentials.from_service_account_file("credentials.json")
+os.remove("credentials.json")
 
 # Initialize Firestore with credentials
-firestore_client = firestore.Client(credentials=credentials, project=credentials["project_id"])
+firestore_client = firestore.Client(
+    credentials=credentials, project=credentials_dict["project_id"]
+)
 
 # Initialize Firestore (Firebase)
 # firestore_client = firestore.Client()
@@ -296,7 +284,6 @@ UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY")
 
 # ✅ Initialize OpenAI Client
 openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))  # ✅ Set API key correctly
-import re
 import datetime
 
 
