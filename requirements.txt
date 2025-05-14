@@ -40,7 +40,6 @@ msgpack==1.1.0
 nltk==3.9.1
 packaging==24.2
 pinecone-client==5.0.1
-pinecone-plugin-interface==0.0.7
 proto-plus==1.26.0
 protobuf==5.29.3
 pyasn1==0.6.1
