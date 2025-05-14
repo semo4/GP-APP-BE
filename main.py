@@ -106,19 +106,28 @@ class ArticleRequest(BaseModel):
 #         "The GOOGLE_APPLICATION_CREDENTIALS environment variable is not set. "
 #         "Please set it to point to your service account JSON file."
 #     )
-cred_json = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-if not cred_json:
-    raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS not set")
-
-# Parse JSON and create credentials
-cred_dict = json.loads(cred_json)
-cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
-
-print(f"Successfully set up GOOGLE_APPLICATION_CREDENTIALS:: {cred_dict}")
-credentials = service_account.Credentials.from_service_account_info(cred_dict)
+credentials_dict = {
+            'type': GCP_ACCOUNT_TYPE,
+            'project_id': GCP_PROJECT_ID,
+            'private_key_id': GCP_PRIVATE_KEY_ID,
+            'private_key': GCP_PRIVATE_KEY,
+            'client_email': GCP_ACCOUNT_EMAIL,
+            'client_id': GCP_ACCOUNT_ID,
+            'auth_uri': GCP_AUTH_URI,
+            'token_uri': GCP_TOKEN_URI,
+            'auth_provider_x509_cert_url': GCP_AUTH_PROVIDER_X509_CERT_URL,
+            'client_x509_cert_url': GCP_CLIENT_X509_CERT_URL
+        }
+        credentials_dict['private_key'] = credentials_dict[
+            'private_key'].replace('\\n', '\n')
+        with open('credentials.json', 'w') as file:
+            file.write(json.dumps(credentials_dict))
+        credentials = service_account.Credentials.from_service_account_file(
+            'credentials.json')
+        os.remove('credentials.json')
 
 # Initialize Firestore with credentials
-firestore_client = firestore.Client(credentials=credentials, project=cred_dict["project_id"])
+firestore_client = firestore.Client(credentials=credentials, project=credentials["project_id"])
 
 # Initialize Firestore (Firebase)
 # firestore_client = firestore.Client()
