@@ -113,6 +113,8 @@ if not cred_json:
 # Parse JSON and create credentials
 cred_dict = json.loads(cred_json)
 cred_dict["private_key"] = cred_dict["private_key"].replace("\\n", "\n")
+
+print(f"Successfully set up GOOGLE_APPLICATION_CREDENTIALS:: {cred_dict}")
 credentials = service_account.Credentials.from_service_account_info(cred_dict)
 
 # Initialize Firestore with credentials
