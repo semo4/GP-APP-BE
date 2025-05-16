@@ -27,6 +27,9 @@ from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec  # Pinecone - NEW USAGE
 from pydantic import BaseModel  # ----------task3Correction
 from textstat import flesch_reading_ease
+from google.api_core.exceptions import GoogleAPICallError
+import firebase_admin
+from firebase_admin import firestore
 
 from services.news_api_service import fetch_trending_news_by_topic
 
@@ -109,12 +112,12 @@ credentials_dict = {
 credentials_dict["private_key"] = credentials_dict["private_key"].replace("\\n", "\n")
 with open("credentials.json", "w") as file:
     file.write(json.dumps(credentials_dict))
-credentials = service_account.Credentials.from_service_account_file("credentials.json")
+cred = service_account.Credentials.from_service_account_file("credentials.json")
 os.remove("credentials.json")
 
 # Initialize Firestore with credentials
 firestore_client = firestore.Client(
-    credentials=credentials, project=credentials_dict["project_id"]
+    credentials=cred, project=credentials_dict["project_id"]
 )
 
 # Initialize Firestore (Firebase)
@@ -313,34 +316,46 @@ async def generate_article(request: ArticleRequest):
     prompt = request.prompt
     user_id = request.user_id
     keywords = request.keywords
-
-    # Fetch Linguistic Print and journalist details from Firestore
-    doc_ref = firestore_client.collection("Journalists").document(user_id)
-    doc = doc_ref.get()
+    
+    
+    
     linguistic_print = {}
     first_name = "Anonymous"
     last_name = ""
     user_title = ""
-
-    if doc.exists:
-        data = doc.to_dict()
-        first_name = data.get("firstName", "Anonymous")
-        last_name = data.get("lastName", "")
-        user_title = data.get("title", "")
-        previous_articles = data.get("previousArticles", [])
-        exported_articles = [
-            article.get("content", "") for article in data.get("exportedArticles", [])
-        ]
-        if previous_articles or exported_articles:
-            linguistic_print = extract_linguistic_print(
-                previous_articles, exported_articles
-            )
-            print("\n✅ DEBUG: Extracted Linguistic Print:", linguistic_print)
-            style_samples = "\n\n".join(
-                previous_articles + exported_articles[:1]
-            )  # limit if too many
+    style_samples = ""
+    previous_articles= []
+    exported_articles = []
+    try:
+        doc = firestore_client.collection("Journalists").document(user_id).get()
+        # doc = await doc_ref.get()
+        if doc.exists:
+            print(f"Document data: {doc.to_dict()}")
+            data = doc.to_dict()
+            first_name = data.get("firstName", "Anonymous")
+            last_name = data.get("lastName", "")
+            user_title = data.get("title", "")
+            previous_articles = data.get("previousArticles", [])
+            exported_articles = [
+                article.get("content", "") for article in data.get("exportedArticles", [])
+            ]
+            if previous_articles or exported_articles:
+                linguistic_print = extract_linguistic_print(
+                    previous_articles, exported_articles
+                )
+                print("\n✅ DEBUG: Extracted Linguistic Print:", linguistic_print)
+                style_samples = "\n\n".join(
+                    previous_articles + exported_articles[:1]
+                )  # limit if too many
+            else:
+                style_samples = ""
         else:
-            style_samples = ""
+            print(f"No such document with ID: {user_id}")
+            
+    except GoogleAPICallError as e:
+        print("Document not found")
+    except Exception as e:
+        print(f"Error accessing Firestore: {e}")
 
     # Build the GPT prompt
     gpt_prompt = f"""
